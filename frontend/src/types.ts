@@ -1,4 +1,6 @@
 export type FlightStatus = "GROUND" | "CLIMB" | "CRUISE" | "DESCENT" | "UNKNOWN";
+export const SUPPORTED_RADII_KM = [50, 100, 200, 500, 1000] as const;
+export type RadiusKm = typeof SUPPORTED_RADII_KM[number];
 
 export interface Aircraft {
   icao24: string;

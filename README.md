@@ -10,7 +10,7 @@ OpenSky → FastAPI backend → GET /api/aircraft → React dashboard
                             GET /health status check
 ```
 
-The backend listens at `http://127.0.0.1:8000`. Vite serves the frontend at `http://127.0.0.1:5173`. Both services need to be running. The dashboard polls the local API every 15 seconds. The radar is drawn locally in SVG and does not use a map provider. It uses the backend coordinates, distance, bearing, and configured radius; an empty response displays “NO AIRCRAFT DETECTED.”
+The backend listens at `http://127.0.0.1:8000`. Vite serves the frontend at `http://127.0.0.1:5173`. Both services need to be running. The dashboard checks backend health and polls aircraft data on a fixed five-second interval, with overlapping requests prevented. A separate local clock updates once per second; the last successful data receipt and the backend's source timestamp are shown separately. The dashboard range selector supports **50, 100, 200, 500, and 1000 km**. Choosing a range immediately requests `GET /api/aircraft?radius_km=<value>`; without that parameter, the backend uses `DESKPLANE_RADIUS_KM` from its environment configuration. The radar is drawn locally in SVG and does not use a map provider. It uses the backend coordinates, distance, bearing, and returned radius; an empty response displays “NO AIRCRAFT DETECTED.”
 
 ## Project structure
 

@@ -1,17 +1,27 @@
 import type { Aircraft } from "../types";
 import { degrees, fixed } from "../utils/format";
+import type { KeyboardEvent } from "react";
 
 interface AircraftListProps {
   aircraft: Aircraft[];
   selectedId: string | null;
   onSelect: (aircraft: Aircraft) => void;
+  loading: boolean;
+  error: string | null;
 }
 
 function statusClass(status: string): string {
   return `status-pill status-${status.toLowerCase()}`;
 }
 
-export function AircraftList({ aircraft, selectedId, onSelect }: AircraftListProps) {
+export function AircraftList({ aircraft, selectedId, onSelect, loading, error }: AircraftListProps) {
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, item: Aircraft) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect(item);
+    }
+  };
+
   return (
     <section className="panel aircraft-panel" aria-labelledby="aircraft-heading">
       <div className="panel-heading list-heading">
@@ -23,10 +33,18 @@ export function AircraftList({ aircraft, selectedId, onSelect }: AircraftListPro
           <thead><tr><th>CALLSIGN / ICAO24</th><th>ALTITUDE</th><th>SPEED</th><th>HDG</th><th>DIST</th><th>BRG</th><th>STATUS</th></tr></thead>
           <tbody>
             {aircraft.length === 0 ? (
-              <tr><td className="table-empty" colSpan={7}>No aircraft inside the detection radius.</td></tr>
+              <tr><td className="table-empty" colSpan={7}>{loading ? "Loading aircraft data…" : error ? "Aircraft data unavailable." : "No aircraft inside the detection radius."}</td></tr>
             ) : aircraft.map((item) => (
-              <tr key={item.icao24} className={selectedId === item.icao24 ? "row-selected" : ""}>
-                <td><button className="aircraft-row-button" onClick={() => onSelect(item)} aria-label={`Select ${item.callsign || "UNKNOWN"} ${item.icao24}`} aria-pressed={selectedId === item.icao24}>
+              <tr
+                key={item.icao24}
+                className={selectedId === item.icao24 ? "row-selected" : ""}
+                tabIndex={0}
+                aria-selected={selectedId === item.icao24}
+                aria-label={`Select ${item.callsign || "UNKNOWN"} ${item.icao24}`}
+                onClick={() => onSelect(item)}
+                onKeyDown={(event) => handleRowKeyDown(event, item)}
+              >
+                <td><button className="aircraft-row-button" type="button" onClick={() => onSelect(item)} aria-label={`Select ${item.callsign || "UNKNOWN"} ${item.icao24}`} aria-pressed={selectedId === item.icao24}>
                   <span className="callsign">{item.callsign || "UNKNOWN"}</span><span className="icao">{item.icao24}</span>
                 </button></td>
                 <td>{item.altitude_ft === null ? "N/A" : `${fixed(item.altitude_ft)} ft`}</td>

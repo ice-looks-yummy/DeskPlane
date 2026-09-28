@@ -13,14 +13,24 @@ describe("local backend API client", () => {
         radius_km: 50,
         count: 0,
         aircraft: [],
+      }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        timestamp: 1750000005,
+        center: { latitude: 20.2961, longitude: 85.8245 },
+        radius_km: 200,
+        count: 0,
+        aircraft: [],
       }) });
     vi.stubGlobal("fetch", fetchMock);
     await expect(getHealth()).resolves.toBe(true);
     const response = await getAircraft();
     expect(response.count).toBe(0);
+    expect(response.radius_km).toBe(50);
+    expect((await getAircraft(200)).radius_km).toBe(200);
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "http://127.0.0.1:8000/health",
       "http://127.0.0.1:8000/api/aircraft",
+      "http://127.0.0.1:8000/api/aircraft?radius_km=200",
     ]);
   });
 

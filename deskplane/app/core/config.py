@@ -1,5 +1,10 @@
-from pydantic import Field, field_validator
+from pathlib import Path
+
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+SUPPORTED_RADIUS_KM = (50, 100, 200, 500, 1000)
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -11,7 +16,7 @@ class Settings(BaseSettings):
     deskplane_longitude: float = Field(ge=-180, le=180)
     deskplane_radius_km: float = Field(gt=0)
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 
 def get_settings() -> Settings:

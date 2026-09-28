@@ -1,17 +1,18 @@
-import type { AircraftResponse } from "../types";
+import type { AircraftResponse, RadiusKm } from "../types";
 import { clockTime, fixed } from "../utils/format";
 
 interface StatusCardsProps {
   data: AircraftResponse | null;
   loading: boolean;
+  selectedRadius: RadiusKm | null;
 }
 
-export function StatusCards({ data, loading }: StatusCardsProps) {
+export function StatusCards({ data, loading, selectedRadius }: StatusCardsProps) {
   const cards = [
     { label: "AIRCRAFT DETECTED", value: data ? String(data.count).padStart(2, "0") : loading ? "··" : "—", unit: "TRACKS", icon: "◎" },
-    { label: "DETECTION RADIUS", value: data ? fixed(data.radius_km, 0) : "—", unit: "KM", icon: "◉" },
+    { label: "DETECTION RADIUS", value: data ? fixed(data.radius_km, 0) : selectedRadius === null ? "—" : fixed(selectedRadius), unit: "KM", icon: "◉" },
     { label: "DESKPLANE LOCATION", value: data ? `${fixed(data.center.latitude, 4)}°, ${fixed(data.center.longitude, 4)}°` : "—", unit: "LAT / LON", icon: "⌖" },
-    { label: "SOURCE UPDATE", value: data ? clockTime(data.timestamp) : "—", unit: "LOCAL TIME", icon: "◷" },
+    { label: "SOURCE DATA TIME", value: data ? clockTime(data.timestamp) : "—", unit: "BACKEND TIME", icon: "◷" },
   ];
   return (
     <section className="status-grid" aria-label="Airspace summary">

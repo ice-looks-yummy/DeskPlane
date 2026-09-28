@@ -25,8 +25,10 @@ def _number(value: Any, field: str) -> float | None:
 
 def parse_opensky_state(state: list[Any]) -> Aircraft:
     """Parse one OpenSky state vector using its documented positional indexes."""
-    if not isinstance(state, list) or len(state) < 18:
-        raise ValueError("OpenSky state vector must contain at least 18 fields")
+    # OpenSky may omit the optional category at index 17. Fields 0 through 16
+    # contain all values needed by DeskPlane's normalized aircraft model.
+    if not isinstance(state, list) or len(state) < 17:
+        raise ValueError("OpenSky state vector must contain at least 17 fields")
     if not isinstance(state[0], str) or not state[0].strip():
         raise ValueError("OpenSky state vector has no valid icao24")
     latitude = _number(state[6], "latitude")
@@ -79,7 +81,7 @@ def calculate_status(on_ground: bool | None, vertical_rate_ms: float | None) -> 
 
 async def fetch_opensky_data(settings: Settings) -> dict[str, Any]:
     """Fetch current state vectors, using OAuth2 client credentials when configured."""
-    async with httpx.AsyncClient(timeout=20.0) as client:
+    async with httpx.AsyncClient(timeout=20.0, trust_env=False) as client:
         headers: dict[str, str] = {}
         if settings.opensky_client_id and settings.opensky_client_secret:
             try:
@@ -96,7 +98,11 @@ async def fetch_opensky_data(settings: Settings) -> dict[str, Any]:
                 headers["Authorization"] = f"Bearer {token}"
             except httpx.TimeoutException:
                 raise
-            except (httpx.HTTPError, ValueError) as exc:
+            except httpx.HTTPStatusError as exc:
+                raise OpenSkyAPIError(f"OpenSky authentication returned HTTP {exc.response.status_code}") from exc
+            except httpx.HTTPError as exc:
+                raise OpenSkyConnectionError("Could not connect to OpenSky authentication service") from exc
+            except ValueError as exc:
                 raise OpenSkyAPIError("OpenSky authentication failed") from exc
         try:
             response = await client.get(OPENSKY_STATES_URL, headers=headers)
@@ -125,8 +131,9 @@ class OpenSkyConnectionError(Exception):
     pass
 
 
-async def get_nearby_aircraft(settings: Settings) -> dict[str, Any]:
+async def get_nearby_aircraft(settings: Settings, radius_km: float | None = None) -> dict[str, Any]:
     payload = await fetch_opensky_data(settings)
+    selected_radius = settings.deskplane_radius_km if radius_km is None else radius_km
     nearby: list[Aircraft] = []
     for state in payload["states"] or []:
         try:
@@ -136,7 +143,7 @@ async def get_nearby_aircraft(settings: Settings) -> dict[str, Any]:
             continue
         distance = haversine_distance_km(settings.deskplane_latitude, settings.deskplane_longitude,
                                          aircraft.latitude, aircraft.longitude)
-        if distance > settings.deskplane_radius_km:
+        if distance > selected_radius:
             continue
         bearing = initial_bearing(settings.deskplane_latitude, settings.deskplane_longitude,
                                   aircraft.latitude, aircraft.longitude)
@@ -149,4 +156,4 @@ async def get_nearby_aircraft(settings: Settings) -> dict[str, Any]:
         timestamp = None
     return {"timestamp": timestamp,
             "center": {"latitude": settings.deskplane_latitude, "longitude": settings.deskplane_longitude},
-            "radius_km": settings.deskplane_radius_km, "count": len(nearby), "aircraft": nearby}
+            "radius_km": selected_radius, "count": len(nearby), "aircraft": nearby}
